@@ -14,10 +14,10 @@ let trimw p = ptrim " \t\n" p
 let extract_full: 'a presult -> 'a =
   function
   | Some(x, "") -> x
-  | _ -> raise (ParseException "Could not parse entire expression")
+  | _ -> raise (ParseException "Could not parse expression")
 
 let make_value v = Val v
-let make_binop p l r =
+let make_binop (p,l,r) =
   match p with
   | '+' -> Add(l,r)
   | '-' -> Sub(l,r)
@@ -31,23 +31,23 @@ let _value = pfloat ||> make_value
 let _pow_op = pchar '^' <|> (literal "**" ||> (fun _ -> '^'))
 let rec _add inp =
   parse (
-    pbinop (parser _sub |> trimw) (pchar '+' |> trimw) (parser _add |> trimw) make_binop <|> parser _sub
+    pbinop (parser _sub |> trimw) (pchar '+' |> trimw) (parser _add |> trimw) ||> make_binop <|> parser _sub
   ) inp
 and _sub inp = parse (
-  pbinop (parser _term |> trimw) (pchar '-' |> trimw) (parser _add |> trimw) make_binop <|> parser _term
-) inp
+    pbinop (parser _term |> trimw) (pchar '-' |> trimw) (parser _add |> trimw) ||> make_binop <|> parser _term
+  ) inp
 and _term inp = parse (
-  pbinop (parser _div |> trimw) (pchar '*' |> trimw) (parser _term |> trimw) make_binop <|> parser _div
-) inp
+    pbinop (parser _div |> trimw) (pchar '*' |> trimw) (parser _term |> trimw) ||> make_binop <|> parser _div
+  ) inp
 and _div inp = parse (
-  pbinop (parser _pow |> trimw) (pchar '/' |> trimw) (parser _term |> trimw) make_binop <|> parser _pow
-) inp
+    pbinop (parser _pow |> trimw) (pchar '/' |> trimw) (parser _term |> trimw) ||> make_binop <|> parser _pow
+  ) inp
 and _pow inp = parse (
-  pbinop (parser _atom |> trimw) (_pow_op |> trimw) (parser _pow |> trimw) make_binop <|> parser _atom
-) inp
+    pbinop (parser _atom |> trimw) (_pow_op |> trimw) (parser _pow |> trimw) ||> make_binop <|> parser _atom
+  ) inp
 and _atom inp = parse (
-  pwrap (pchar '(' |> trimw) (pchar ')' |> trimw) (parser _add) <|> _value
-) inp
+    pwrap (pchar '(' |> trimw) (pchar ')' |> trimw) (parser _add) <|> _value
+  ) inp
 
 let expr = parser _add
 
