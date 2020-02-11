@@ -1,0 +1,3 @@
+(library
+ (name "libnacc")
+ (modules base parsing utils))
