@@ -1,4 +1,5 @@
 (library
  (name "libnacc")
  (public_name "nacc")
- (modules base parsing utils))
+ (preprocess (pps ppx_variants_conv))
+ (modules parsing parsers))

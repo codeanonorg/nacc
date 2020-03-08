@@ -5,15 +5,15 @@
 
 (license MIT)
   (maintainers "Nathan Graule <solarliner@gmail.com>")
-   (authors "Nathan Graule <solarliner@gmail.com>" "Arthur Corrensson <arthur.corrensson@gmail.com>")
+   (authors "Nathan Graule <solarliner@gmail.com>" "Arthur Correnson <arthur.correnson@gmail.com>")
 (source (github codeanonorg/nacc))
 
 (package
   (name nacc)
   (depends
-   (ocaml (>= 4.08))
-    (dune (>= 2.0))
-    )
+    (ocaml (>= 4.08))
+    (ppx_variants_conv (>= 0.13))
+    (dune (>= 2.0)))
   (synopsis "Not Another Compiler Compiler")
   (description "
     nacc, short for \"Not a Compiler Compiler\" or alternatively \"Not Another Compiler Compiler\" is a homemade parser combinator, as inspired from Computerphile's video on Functional Parsing (https://www.youtube.com/watch?v=dDtZLm7HIJs).

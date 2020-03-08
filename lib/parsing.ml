@@ -1,85 +1,70 @@
-module String =
-struct
-  include String
 
-  let explode s =
-    let rec step lc i =
-      if i = length s then lc
-      else step (lc @ [s.[i]]) (i+1)
-    in
-    step [] 0
+type 'a parser = string -> ('a * string) option
 
-  let combine = List.fold_left (fun acc c -> acc ^ String.make 1 c) ""
+(** Pure parser (stop flux consumption, returns results) *)
+let pure x : 'a parser = fun input -> Some (x, input)
 
-  let combine_str = List.fold_left (^) ""
+(** Map *)
+let (<$>) f p = fun input ->
+  match p input with
+  | None -> None
+  | Some (x, next) -> Some (f x, next)
 
-  let substr l r s = String.sub s l ((length s) - 1 - r)
-  let rest = substr 1 0
-end
+(** Apply *)
+let (<*>) p1 p2 = fun input ->
+  match p1 input with
+  | None -> None
+  | Some (f, input') ->
+    match p2 input' with
+    | Some (x, input'')  -> Some (f x, input'')
+    | None -> None
 
-open Base
+(** Apply to the right *)
+let ( *> ) p1 p2 =
+  (fun _ y -> y) <$> p1 <*> p2
 
-(**
-   Single character parser. Parses [c] in front of the input
-*)
-let pchar c =
-  P(function
-     | "" -> None
-     | x when x.[0] = c -> Some(c, String.rest x)
-     | _ -> None)
+(** Apply to the left *)
+let ( <* ) p1 p2 =
+  (fun x _ -> x) <$> p1 <*> p2
 
-(**
-   Parser that applies [p] zero or more times.
-   Returns the result as a list. *)
-let rec some (p: 'a parser) =
-  P (fun inp -> match parse p inp with
-      | None -> Some([], inp)
-      | Some(x, rest) -> match parse (some p) rest with
-        | None -> Some([x], rest)
-        | Some (lx, r) -> Some(x::lx, r))
+(** Alternative *)
+let (<|>) p1 p2 = fun input ->
+  match p1 input with
+  | None -> p2 input
+  | x -> x
 
-(**
-   Parser that applies [p] one or more times.
-   Returns the result as a list (or None) *)
-let many (p: 'a parser) =
-  let* x = p in
-  let* lx = some p in
-  P(fun inp -> Some(x::lx, inp))
+(** Run a parser on a string *)
+let do_parse p input =
+  match p input with
+  | Some (x, "") -> Some x
+  | _ -> None
 
-(**
-   Parser that eats a single character unconditionally. *)
-let any = P(fun inp -> Some(String.get inp 0, String.rest inp))
+let (==>) inp p = p inp
 
-(**
-   Parser that eats any of the characters present in the list [cl]. *)
-let anychar_of =
-  function
-  | x::rest -> List.fold_left (<|>) (pchar x) (List.map pchar rest)
-  | [] -> pzero
+(** Parse zero or more *)
+let rec many (p:'a parser) : 'a list parser = fun inp ->
+  (* (List.cons <$> p <*> many p) <|> (pure []) *)
+  match p inp with
+  | None -> Some ([], inp)
+  | Some (x, next) ->
+    match many p next with
+    | None -> None
+    | Some (l, next) -> Some (x::l, next)
 
-(**
-   Parser that accepts any char in string [s]. *)
-let anychar_in s = String.explode s |> anychar_of
+(** Parse one or more *)
+let some p = fun inp ->
+  (* (List.cons <$> p) <*> many p *)
+  match p inp with
+  | None -> None
+  | Some (x, next) ->
+    match many p next with
+    | None -> None
+    | Some (l, next) -> Some (x::l, next)
 
-
-(**
-   Parser that tries to succesfully parse all parsers in order of [pl], or fail on any of them failing. *)
-let rec sequence =
-  function
-  | [] -> pone
-  | p::pl ->
-    let* x = p in
-    let* xs = sequence pl in
-    P(fun inp -> Some(x::xs, inp))
-
-(**
-   Parse a sequence of characters [cl] *)
-let sequence_of_chars cl = sequence (List.map pchar cl)
-
-(**
-   Parse the string sequence [s] into a list of characters. *)
-let sequence_of_string s = sequence_of_chars (String.explode s)
-
-(**
-   Parse the string literal [s]. *)
-let literal s = sequence_of_string s ||> String.combine
+(** Check a predicate on the first character of the input.
+    Resolve to this character if the predicate is verified *)
+let check pred = fun input ->
+  match input with
+  | s when s <> "" && pred s.[0] ->
+    Some (s.[0], String.(sub s 1 (length s - 1)))
+  | _ -> None
