@@ -2,7 +2,7 @@
 type 'a parser = string -> ('a * string) option
 
 (** Pure parser (stop flux consumption, returns results) *)
-let pure x : 'a parser = fun input -> Some (x, input)
+let pure x = fun input -> Some (x, input)
 
 (** Map *)
 let (<$>) f p = fun input ->
@@ -41,25 +41,32 @@ let do_parse p input =
 
 let (==>) inp p = p inp
 
+let rec many p = fun inp ->
+  ((List.cons <$> p <*> many p) <|> (pure [])) inp
+
+let some p = fun inp ->
+  (List.cons <$> p <*> many p) inp
+
+
 (** Parse zero or more *)
-let rec many (p:'a parser) : 'a list parser = fun inp ->
-  (* (List.cons <$> p <*> many p) <|> (pure []) *)
-  match p inp with
-  | None -> Some ([], inp)
-  | Some (x, next) ->
+(* let rec many (p:'a parser) : 'a list parser = fun inp ->
+   (* (List.cons <$> p <*> many p) <|> (pure []) *)
+   match p inp with
+   | None -> Some ([], inp)
+   | Some (x, next) ->
     match many p next with
     | None -> None
     | Some (l, next) -> Some (x::l, next)
 
-(** Parse one or more *)
-let some p = fun inp ->
-  (* (List.cons <$> p) <*> many p *)
-  match p inp with
-  | None -> None
-  | Some (x, next) ->
+   (** Parse one or more *)
+   let some p = fun inp ->
+   (* (List.cons <$> p) <*> many p *)
+   match p inp with
+   | None -> None
+   | Some (x, next) ->
     match many p next with
     | None -> None
-    | Some (l, next) -> Some (x::l, next)
+    | Some (l, next) -> Some (x::l, next) *)
 
 (** Check a predicate on the first character of the input.
     Resolve to this character if the predicate is verified *)
