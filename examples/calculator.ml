@@ -7,31 +7,50 @@ type expr =
   | Sub of expr * expr
   | Mul of expr * expr
   | Div of expr * expr
-  | Pow of expr * expr
 [@@deriving variants, show]
 
-
-let rec parse_exp inp = inp ==> begin
-    binop add '+' parse_mul
+let rec parse_exp inp = inp --> begin
+    binop add '+' ~~parse_mul
     <|>
-    binop sub '-' parse_mul
+    binop sub '-' ~~parse_mul
     <|>
-    parse_mul
+    ~~parse_mul
   end
 
-and parse_mul inp = inp ==> begin
-    binop mul '*' parse_fac
+and parse_mul inp = inp --> begin
+    binop mul '*' ~~parse_fac
     <|>
-    binop div '/' parse_fac
+    binop div '/' ~~parse_fac
     <|>
-    parse_fac
+    ~~parse_fac
   end
 
-and parse_fac inp = inp ==> begin
-    char '(' *> parse_exp <* char ')'
+and parse_fac inp = inp --> begin
+    parenthesized '(' ~~parse_exp ')'
     <|>
-    (cst <$> integer)
+    ~~parse_cst
   end
 
-let x = do_parse parse_exp "1+2*3"
-        |> Option.get |> show_expr |> print_endline
+and parse_cst inp = inp --> begin
+    cst <$> integer
+  end
+
+let _ =
+  do_parse ~~parse_exp "1+2*3"
+  |> Option.get |> show_expr |> print_endline
+
+let _ =
+  do_parse ~~parse_exp "(1+2)*3"
+  |> Option.get |> show_expr |> print_endline
+
+let _ =
+  do_parse ~~parse_exp "( 1 + 2 ) * ( 5 + 96) "
+  |> Option.get |> show_expr |> print_endline
+
+let _ =
+  do_parse ~~parse_exp "(1+2)*(5+96)"
+  |> Option.get |> show_expr |> print_endline
+
+let _ =
+  do_parse ~~parse_exp "(1*2)+(5*96)"
+  |> Option.get |> show_expr |> print_endline
