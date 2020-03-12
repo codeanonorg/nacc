@@ -30,6 +30,20 @@ let integer =
   let convert l = List.(fold_left (^) "" (map (String.make 1) l)) |> int_of_string in
   convert <$> some (one_in "0123456789")
 
+let floatingpoint =
+  let convert l = List.(fold_left (^) "" (map (String.make 1) l)) |> float_of_string in
+  let concat a b = List.concat [a;b] in
+  let (&>) p1 p2 = concat <$> p1<*> p2 in
+  let maybe p inp = match inp --> p with
+    | Some(x, r) -> Some([x], r)
+    | None -> Some([], inp)
+  in
+  convert <$> (
+    (many (one_in "0123456789") &> ~~(maybe (char '.')) &> some (one_in "0123456789"))
+    <|>
+    (many (one_in "0123456789"))
+  )
+
 (** Parser for binary operations patterns
     @param  cons    a 2-parameters constructor
     @param  c       an operator character
@@ -57,5 +71,5 @@ let parenthesized opar v cpar =
   spaced (char opar) *>v <* spaced (char cpar)
 
 (** Custom parenthesized data *)
-let cparenthized copar v ccpar =
+let cparenthesized copar v ccpar =
   spaced copar *> v <* spaced ccpar

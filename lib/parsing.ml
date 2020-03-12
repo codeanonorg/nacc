@@ -58,22 +58,21 @@ let do_parse (P p) input =
     remaining chars. *)
 let (-->) inp (P p) = p inp
 
-(** Feed a parser with a string (from right to left) 
+(** Feed a parser with a string (from right to left)
     [p <-- input] is [input --> p]. This function is just for code convenience. *)
 let (<--) (P p) inp = p inp
 
-(** Parse zero or more times a given pattern 
+(** Parse zero or more times a given pattern
     @param  p   a parser *)
 let rec many p = P (fun inp ->
     (List.cons <$> p <*> many p <|> pure []) <-- inp
   )
 
-(** Parse one or more times a given pattern 
+(** Parse one or more times a given pattern
     @param  p   a parser *)
 let some p = P (fun inp ->
     (List.cons <$> p <*> many p) <-- inp
   )
-
 (** Check a predicate on the first character of the input.
     Resolve to this character if the predicate is verified *)
 let check pred = P (fun input ->
