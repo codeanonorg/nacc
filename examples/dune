@@ -1,3 +1,5 @@
 (executable
-	(name calculator)
-	(libraries libnacc))
+ (name calculator)
+ (preprocess
+  (pps ppx_variants_conv ppx_deriving.show))
+ (libraries libnacc))
