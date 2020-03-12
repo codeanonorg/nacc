@@ -1,5 +1,6 @@
 (lang dune 2.0)
 (name "nacc")
+(version 0.1)
 
 (generate_opam_files true)
 
@@ -12,6 +13,7 @@
   (name nacc)
   (depends
     (ocaml (>= 4.08))
+    (ppx_deriving (>= 4.4))
     (ppx_variants_conv (>= 0.13))
     (dune (>= 2.0)))
   (synopsis "Not Another Compiler Compiler")
