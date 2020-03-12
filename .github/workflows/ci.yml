@@ -13,8 +13,10 @@ jobs:
         with:
           # Version of the OCaml compiler to initialise
           ocaml-version: 4.08.0
-      - name: Compile
-        run: eval $(opam env) && opam install dune ppx_variants_conv && dune build && dune install --prefix=_install
+      - name: Compile & Install
+        run: yes | opam switch --create ./
+      - name: Test
+        run: dune build @install
       - name: Cache
         uses: actions/cache@v1.1.2
         with:
