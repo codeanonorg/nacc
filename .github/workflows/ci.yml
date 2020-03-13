@@ -50,4 +50,4 @@ jobs:
       - name: GitHub Pages
         uses: crazy-max/ghaction-github-pages@v1.3.0
         with:
-          build_dir: _build/default/_doc/html
+          build_dir: _build/default/_doc/_html
