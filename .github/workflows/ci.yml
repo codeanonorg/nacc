@@ -30,3 +30,25 @@ jobs:
           name: CI build
           # Directory containing files to upload
           path: _install
+  docs:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+      - name: Setup OCaml
+        uses: avsm/setup-ocaml@v1.0
+        with:
+          # Version of the OCaml compiler to initialise
+          ocaml-version: 4.08.0
+      - name: Build docs
+        run: |
+          eval $(opam env)
+          opam install .
+          dune build @doc
+      - name: GitHub Pages
+        uses: crazy-max/ghaction-github-pages@v1.3.0
+        with:
+          build_dir: _build/default/_doc/html
