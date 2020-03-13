@@ -46,8 +46,9 @@ jobs:
       - name: Build docs
         run: |
           eval $(opam env)
-          opam install .
+          opam install . && opam install odoc
           dune build @doc
+
       - name: GitHub Pages
         uses: crazy-max/ghaction-github-pages@v1.3.0
         with:
