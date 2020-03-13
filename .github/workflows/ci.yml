@@ -5,14 +5,9 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    container: ocaml/opam2:4.08
     steps:
       - uses: actions/checkout@v2
-      - name: Setup OCaml
-        uses: avsm/setup-ocaml@v1.0
-        with:
-          # Version of the OCaml compiler to initialise
-          ocaml-version: 4.08.0
       - name: Compile & Install
         run: eval $(opam env) && opam install .
       - name: Install (local)
@@ -33,16 +28,11 @@ jobs:
   docs:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
-
+    container: ocaml/opam2:4.08
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - name: Setup OCaml
-        uses: avsm/setup-ocaml@v1.0
-        with:
-          # Version of the OCaml compiler to initialise
-          ocaml-version: 4.08.0
       - name: Build docs
         run: |
           eval $(opam env)
