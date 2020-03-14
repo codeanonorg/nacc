@@ -5,9 +5,12 @@
 (generate_opam_files true)
 
 (license MIT)
-  (maintainers "Nathan Graule <solarliner@gmail.com>")
-   (authors "Nathan Graule <solarliner@gmail.com>" "Arthur Correnson <arthur.correnson@gmail.com>")
+(maintainers "Nathan Graule <solarliner@gmail.com>")
+(authors "Nathan Graule <solarliner@gmail.com>" "Arthur Correnson <arthur.correnson@gmail.com>")
 (source (github codeanonorg/nacc))
+(bug_reports https://github.com/codeanonorg/nacc/issues)
+(documentation https://codeanonorg.github.io/nacc)
+(homepage https://github.com/codeanonorg/nacc)
 
 (package
   (name nacc)
