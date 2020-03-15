@@ -42,26 +42,26 @@ module Parser (In : INPUT_TYPE) = struct
   let eat =
     P
       (fun inp ->
-        match In.extract 1 inp with
-        | Some (c :: _, rest) -> (Some c, 1, rest)
-        | _ -> (None, 0, inp))
+         match In.extract 1 inp with
+         | Some (c :: _, rest) -> (Some c, 1, rest)
+         | _ -> (None, 0, inp))
 
   let check f =
     P
       (fun inp ->
-        match In.extract 1 inp with
-        | Some (c :: _, rest) when f c -> (Some c, 1, rest)
-        | _ -> (None, 0, inp))
+         match In.extract 1 inp with
+         | Some (c :: _, rest) when f c -> (Some c, 1, rest)
+         | _ -> (None, 0, inp))
 
   let ( <*> ) (P p1) (P p2) =
     P
       (fun inp ->
-        match p1 inp with
-        | Some f, o', inp' -> (
-            match p2 inp' with
-            | Some x, o'', inp'' -> (Some (f x), o' + o'', inp'')
-            | _ -> (None, o', inp') )
-        | _ -> (None, 0, inp))
+         match p1 inp with
+         | Some f, o', inp' -> (
+             match p2 inp' with
+             | Some x, o'', inp'' -> (Some (f x), o' + o'', inp'')
+             | _ -> (None, o', inp') )
+         | _ -> (None, 0, inp))
 
   let ( <$> ) f p = pure f <*> p
 
@@ -86,11 +86,20 @@ end
 module ParserContrib (In : INPUT_CONTRIB_TYPE) = struct
   include Parser (In)
 
+
+
   let elem e = check (( = ) e)
 
   let one_of el = check (fun e -> List.mem e el)
 
   let one_in s = one_of (In.explode s)
+
+  let rec seq =
+    function
+    | [] -> pure []
+    | p::pl -> List.cons <$> p <*> seq pl
+
+  let literal s = In.join <$> (In.explode s |> List.map elem |> seq)
 
   let binop cons c v = cons <$> v <*> c *> v
 
@@ -120,8 +129,8 @@ module StringParser = struct
       | _ as s when n = String.length s -> Some (explode s, "")
       | _ as s when n = 0 -> Some ([], s)
       | _ as s ->
-          Some
-            (String.sub s 0 n |> explode, String.sub s n (String.length s - 1))
+        Some
+          (String.sub s 0 n |> explode, String.sub s n (String.length s - 1))
 
     let rec join = function [] -> "" | c :: cs -> String.make 1 c ^ join cs
 
