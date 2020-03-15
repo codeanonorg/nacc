@@ -1,77 +1,78 @@
-(**************************************************************************)
-(*                           _   _    _    ____ ____                      *)
-(*                          | \ | |  / \  / ___/ ___|                     *)
-(*                          |  \| | / _ \| |  | |                         *)
-(*                          | |\  |/ ___ \ |__| |___                      *)
-(*                          |_| \_/_/   \_\____\____|                     *)
-(*                                                                        *)
-(*                                                                        *)
-(*                        Copyright (c) 2020 - CodeAnon                   *)
-(**************************************************************************)
+module type INPUT_TYPE = sig
+  type outer
 
-(** Type parser *)
-type 'a parser = P of (string -> ('a * string) option)
+  type inner
 
-(** Pure parser (stop flux consumption, returns results) *)
-let pure x = P (fun input -> Some (x, input))
+  val extract : int -> outer -> (inner list * outer) option
 
-(** Map *)
-let ( <$> ) f (P p) =
-  P
-    (fun input ->
-      match p input with None -> None | Some (x, next) -> Some (f x, next))
+  val join : inner list -> outer
 
-(** Apply *)
-let ( <*> ) (P p1) (P p2) =
-  P
-    (fun input ->
-      match p1 input with
-      | None -> None
-      | Some (f, input') -> (
-          match p2 input' with
-          | Some (x, input'') -> Some (f x, input'')
-          | None -> None ))
+  val concat : outer list -> outer
+end
 
-(** Apply to the right *)
-let ( *> ) p1 p2 = (fun _ y -> y) <$> p1 <*> p2
+module Parser (In : INPUT_TYPE) = struct
+  type 'a state = 'a option * int * In.outer
 
-(** Apply to the left *)
-let ( <* ) p1 p2 = (fun x _ -> x) <$> p1 <*> p2
+  type input = In.outer
 
-(** Alternative *)
-let ( <|> ) (P p1) (P p2) =
-  P (fun input -> match p1 input with None -> p2 input | x -> x)
+  type 'a parsefun = input -> 'a state
 
-(** Run a parser on a string *)
-let do_parse (P p) input =
-  match p input with Some (x, "") -> Some x | _ -> None
+  type 'a parser = P of 'a parsefun
 
-(** Feed a parser with a string (from left to right)
-    This is verry different from [do_parse] ! No verifications are made on the
-    remaining chars. *)
-let ( --> ) inp (P p) = p inp
+  type 'a t = 'a parser
 
-(** Feed a parser with a string (from right to left)
-    [p <-- input] is [input --> p]. This function is just for code convenience. *)
-let ( <-- ) (P p) inp = p inp
+  exception ParseException of int * In.outer
 
-(** Parse zero or more times a given pattern
-    @param  p   a parser *)
-let rec many p = P (fun inp -> List.cons <$> p <*> many p <|> pure [] <-- inp)
+  let parse (P p) inp = p inp
 
-(** Parse one or more times a given pattern
-    @param  p   a parser *)
-let some p = P (fun inp -> List.cons <$> p <*> many p <-- inp)
+  let do_parse (P p) inp =
+    match p inp with
+    | Some x, _, r when r = In.join [] -> x
+    | Some _, o, r -> raise (ParseException (o, r))
+    | None, o, r -> raise (ParseException (o, r))
 
-(** Check a predicate on the first character of the input.
-    Resolve to this character if the predicate is verified *)
-let check pred =
-  P
-    (fun input ->
-      match input with
-      | s when s <> "" && pred s.[0] ->
-          Some (s.[0], String.(sub s 1 (length s - 1)))
-      | _ -> None)
+  let pure v = P (fun inp -> (Some v, 0, inp))
 
-(** Alias for constructor [P] *)
-let ( ~~ ) f = P f
+  let eat =
+    P
+      (fun inp ->
+         match In.extract 1 inp with
+         | Some (c :: _, rest) -> (Some c, 1, rest)
+         | _ -> (None, 0, inp))
+
+  let check f =
+    P
+      (fun inp ->
+         match In.extract 1 inp with
+         | Some (c :: _, rest) when f c -> (Some c, 1, rest)
+         | _ -> (None, 0, inp))
+
+  let ( <*> ) (P p1) (P p2) =
+    P
+      (fun inp ->
+         match p1 inp with
+         | Some f, o', inp' -> (
+             match p2 inp' with
+             | Some x, o'', inp'' -> (Some (f x), o' + o'', inp'')
+             | _ -> (None, o', inp') )
+         | _ -> (None, 0, inp))
+
+  let ( <$> ) f p = pure f <*> p
+
+  let ( *> ) p1 p2 = (fun _ y -> y) <$> p1 <*> p2
+
+  let ( <* ) p1 p2 = (fun x _ -> x) <$> p1 <*> p2
+
+  let ( <|> ) (P p1) (P p2) =
+    P (fun inp -> match p1 inp with None, _, _ -> p2 inp | x -> x)
+
+  let ( --> ) inp (P p) = p inp
+
+  let ( <-- ) = parse
+
+  let rec many p = P (fun inp -> List.cons <$> p <*> many p <|> pure [] <-- inp)
+
+  let some p = P (fun inp -> List.cons <$> p <*> many p <-- inp)
+
+  let ( ~~ ) f = P f
+end

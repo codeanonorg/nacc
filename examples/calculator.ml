@@ -1,4 +1,3 @@
-open Libnacc.Parsing
 open Libnacc.Parsers
 
 type expr =
@@ -10,40 +9,42 @@ type expr =
   | Pow of expr * expr
 [@@deriving variants, show]
 
+open StringParser
+
 let rec parse_exp inp =
   inp
-  --> (binop add '+' ~~parse_mul <|> binop sub '-' ~~parse_mul <|> ~~parse_mul)
+  --> (ebinop2 add '+' ~~parse_mul ~~parse_exp <|> ebinop2 sub '-' ~~parse_mul ~~parse_exp <|> ~~parse_mul)
 
 and parse_mul inp =
   inp
-  --> (binop mul '*' ~~parse_pow <|> binop div '/' ~~parse_pow <|> ~~parse_pow)
+  --> (ebinop2 mul '*' ~~parse_pow ~~parse_mul <|> ebinop2 div '/' ~~parse_pow ~~parse_mul <|> ~~parse_pow)
 
-and parse_pow inp = inp --> (binop pow '^' ~~parse_fac <|> ~~parse_fac)
+and parse_pow inp = inp --> (binop2 pow (literal "**") ~~parse_fac ~~parse_pow <|> ~~parse_fac)
 
-and parse_fac inp = inp --> (parenthesized '(' ~~parse_exp ')' <|> ~~parse_cst)
+and parse_fac inp = inp --> (eparenthesized '(' ~~parse_exp ')' <|> ~~parse_cst)
 
 and parse_cst inp = inp --> (cst <$> floatingpoint)
 
 (* let _ =
-  do_parse ~~parse_exp "1+2*3"
-  |> Option.get |> show_expr |> print_endline
+   do_parse ~~parse_exp "1+2*3"
+   |> Option.get |> show_expr |> print_endline
 
-let _ =
-  do_parse ~~parse_exp "(1+2)*3"
-  |> Option.get |> show_expr |> print_endline
+   let _ =
+   do_parse ~~parse_exp "(1+2)*3"
+   |> Option.get |> show_expr |> print_endline
 
-let _ =
-  do_parse ~~parse_exp "( 1 + 2 ) * ( 5 + 96) "
-  |> Option.get |> show_expr |> print_endline
+   let _ =
+   do_parse ~~parse_exp "( 1 + 2 ) * ( 5 + 96) "
+   |> Option.get |> show_expr |> print_endline
 
-let _ =
-  do_parse ~~parse_exp "(1+2)*(5+96)"
-  |> Option.get |> show_expr |> print_endline
+   let _ =
+   do_parse ~~parse_exp "(1+2)*(5+96)"
+   |> Option.get |> show_expr |> print_endline
 
-let _ =
-  do_parse ~~parse_exp "(1*2)+(5*96)"
-  |> Option.get |> show_expr |> print_endline
- *)
+   let _ =
+   do_parse ~~parse_exp "(1*2)+(5*96)"
+   |> Option.get |> show_expr |> print_endline
+*)
 
 let rec eval = function
   | Cst v -> v
@@ -57,13 +58,16 @@ let _ =
   while true do
     print_string "Calc # ";
     flush stdout;
-    let fst (a, _) = a in
+    let input = read_line () in
     try
-      read_line () --> ~~parse_exp
-      |> Option.get |> fst |> eval |> string_of_float |> print_endline
+      do_parse ~~parse_exp input |> eval |> string_of_float |> print_endline
     with
-    | Invalid_argument _ -> print_endline "Syntax error"
+    | ParseException(o, _) -> begin
+        print_endline ("Parse error at character " ^ string_of_int o);
+        print_endline ("\t"^input);
+        print_endline ("\t" ^ String.make o ' ' ^ "^")
+      end
     | End_of_file ->
-        print_endline "Bye.";
-        exit 0
+      print_endline "Bye.";
+      exit 0
   done
