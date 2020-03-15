@@ -35,6 +35,13 @@ module ParserContrib (In : INPUT_CONTRIB_TYPE) = struct
   let parenthesized opar v cpar = opar *> v <* cpar
 
   let eparenthesized eopar v ecpar = parenthesized (elem eopar) v (elem ecpar)
+
+  let trim el p = List.fold_right (fun x acc -> acc <|> (elem x)) el nothing *> p
+
+  let optional (P p) = P(fun inp ->
+      match p inp with
+      | (None, o, r) -> (Some [], o, r)
+      | (Some x, o, r) -> (Some [x], o, r))
 end
 
 module StringParser = struct
@@ -75,12 +82,7 @@ module StringParser = struct
     let plist = one_in "0123456789" in
     let concat a b = List.concat [ a; b ] in
     let ( &> ) p1 p2 = concat <$> p1 <*> p2 in
-    let maybe p inp =
-      match p <-- inp with
-      | Some x, o, r -> (Some [ x ], o, r)
-      | None, o, r -> (Some [], o, r)
-    in
     convert
-    <$> (many plist &> ~~(maybe (elem '.')) &> some plist)
+    <$> (many plist &> (optional (elem '.')) &> some plist)
     <|> (float_of_int <$> integer)
 end

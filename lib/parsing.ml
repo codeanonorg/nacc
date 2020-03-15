@@ -32,6 +32,7 @@ module Parser (In : INPUT_TYPE) = struct
     | None, o, r -> raise (ParseException (o, r))
 
   let pure v = P (fun inp -> (Some v, 0, inp))
+  let nothing = P(fun inp -> (None, 0, inp))
 
   let eat =
     P
