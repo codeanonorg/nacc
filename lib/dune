@@ -3,4 +3,4 @@
  (public_name "nacc")
  (preprocess
   (pps ppx_variants_conv))
- (modules parsing parsers))
+ (modules parsing parsers pmonad))
