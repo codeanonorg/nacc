@@ -36,7 +36,8 @@ module ParserContrib (In : INPUT_CONTRIB_TYPE) = struct
 
   let eparenthesized eopar v ecpar = parenthesized (elem eopar) v (elem ecpar)
 
-  let trim el p = List.fold_right (fun x acc -> acc <|> (elem x)) el nothing *> p
+  let trim el p = let inner = List.fold_right (fun x acc -> acc <|> (elem x)) el nothing in
+    many inner *> p
 
   let optional (P p) = P(fun inp ->
       match p inp with
