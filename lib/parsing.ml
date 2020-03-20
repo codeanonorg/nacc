@@ -9,81 +9,69 @@
 (*                        Copyright (c) 2020 - CodeAnon                   *)
 (**************************************************************************)
 
+type 'a state = 'a option * int * int * string
 (** Type state *)
-type 'a state = ('a option * int * string)
 
-let state v o r = (v,o,r)
+let state v o l r = (v, o, l, r)
 
-let result_of_state =
-  function
-  | (Some v, _, _) -> Ok(v)
-  | (None, o, r) -> Error(o,r)
+let result_of_state = function
+  | Some v, _, _, _ -> Ok v
+  | None, o, l, r -> Error (o, l, r)
 
-let state_value = function (x, _, _) -> x
-let state_offset = function (_, o, _) -> o
-let state_rest = function (_, _, r) -> r
+let state_value (x, _, _, _) = x
 
-(** Type parser *)
+let state_offset (_, o, _, _) = o
+
+let state_rest (_, _, _, r) = r
+
+let state_line (_, _, l, _) = l
+
 type 'a parser = P of (string -> 'a state)
 
-(** Pure parser (stop flux consumption, returns results) *)
-let pure x = P (fun input -> (Some x, 0, input))
-
-(** Apply *)
-let ( <*> ) (P p1) (P p2) =
-  P
-    (fun input ->
-       match p1 input with
-       | (Some f, o', input') -> (
-           match p2 input' with
-           | (Some x, o'', input'') -> (Some (f x), o'+o'', input'')
-           | (None, o'', input'') -> (None, o'+o'', input''))
-       | (None, o', input') -> (None, o', input')
-    )
-
-(** Map *)
-let ( <$> ) f p = pure f <*> p
-
-(** Apply to the right *)
-let ( *> ) p1 p2 = (fun _ y -> y) <$> p1 <*> p2
-
-(** Apply to the left *)
-let ( <* ) p1 p2 = (fun x _ -> x) <$> p1 <*> p2
-
-(** Alternative *)
-let ( <|> ) (P p1) (P p2) =
-  P (fun input -> match p1 input with (None, _, _) -> p2 input | x -> x)
-
-(** Run a parser on a string *)
 let do_parse (P p) input =
-  match p input with (Some x, _, _) -> Result.ok x | (None, o, inp) -> Result.error (o,inp)
+  match p input with
+  | Some x, _, _, _ -> Result.ok x
+  | None, o, _, inp -> Result.error (o, inp)
 
-(** Feed a parser with a string (from left to right)
-    This is verry different from [do_parse] ! No verifications are made on the
-    remaining chars. *)
 let ( --> ) inp (P p) = p inp
 
-(** Feed a parser with a string (from right to left)
-    [p <-- input] is [input --> p]. This function is just for code convenience. *)
 let ( <-- ) (P p) inp = p inp
 
-(** Parse zero or more times a given pattern
-    @param  p   a parser *)
+let pure x = P (fun input -> (Some x, 0, 0, input))
+
+let ( <*> ) p1 p2 =
+  P
+    (fun input ->
+       match p1 <-- input with
+       | Some f, o', _, input' -> (
+           match p2 <-- input' with
+           | Some x, o'', l, input'' -> (Some (f x), o' + o'', l, input'')
+           | None, o'', l, input'' -> (None, o' + o'', l, input'') )
+       | None, o', l, input' -> (None, o', l, input'))
+
+let ( <$> ) f p = pure f <*> p
+
+let ( *> ) p1 p2 = (fun _ y -> y) <$> p1 <*> p2
+
+let ( <* ) p1 p2 = (fun x _ -> x) <$> p1 <*> p2
+
+let ( <|> ) p1 p2 =
+  P
+    (fun input ->
+       match p1 <-- input with
+       | None, _, _, _ -> p2 <-- input
+       | x -> x)
+
 let rec many p = P (fun inp -> List.cons <$> p <*> many p <|> pure [] <-- inp)
 
-(** Parse one or more times a given pattern
-    @param  p   a parser *)
 let some p = P (fun inp -> List.cons <$> p <*> many p <-- inp)
 
-(** Check a predicate on the first character of the input.
-    Resolve to this character if the predicate is verified *)
 let check pred =
   P
     (fun input ->
        match input with
        | s when s <> "" && pred s.[0] ->
-         (Some s.[0], 1, String.(sub s 1 (length s - 1)))
-       | _ -> (None, 0, input))
+         (Some s.[0], 1, (if s.[0] = '\n' then 1 else 0), String.(sub s 1 (length s - 1)))
+       | _ -> (None, 0, 0, input))
 
-(** Alias for constructor [P] *)
 let ( ~~ ) f = P f

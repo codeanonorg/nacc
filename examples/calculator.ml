@@ -58,9 +58,10 @@ let _ =
     print_string "Calc # ";
     flush stdout;
     try
-      match read_line() --> ~~parse_exp |> result_of_state with
+      match read_line () --> ~~parse_exp |> result_of_state with
       | Ok v -> eval v |> string_of_float |> print_endline
-      | Error(o, _) -> print_endline ("Parse error at offset "^string_of_int o)
+      | Error (o, l, _) ->
+        Printf.fprintf stdout "Parse error at line %d offset %d\n" o l
     with
     | Invalid_argument _ -> print_endline "Syntax error"
     | End_of_file ->

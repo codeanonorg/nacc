@@ -50,9 +50,10 @@ let integer =
         <|> many (one_in "0123456789") ) *)
 
 let floatingpoint =
-  let join l = List.(fold_left (^) "" (map (String.make 1) l)) in
+  let join l = List.(fold_left ( ^ ) "" (map (String.make 1) l)) in
   let convert i f = float_of_int i +. float_of_string ("." ^ f) in
-  convert 0 <$> (char '.') *> (join <$> many (one_in "0123456789"))
+  convert 0
+  <$> char '.' *> (join <$> many (one_in "0123456789"))
   <|> (convert <$> integer <*> char '.' *> (join <$> some (one_in "0123456789")))
   <|> (float_of_int <$> integer)
 
