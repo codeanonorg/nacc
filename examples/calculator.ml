@@ -25,25 +25,25 @@ and parse_fac inp = inp --> (parenthesized '(' ~~parse_exp ')' <|> ~~parse_cst)
 and parse_cst inp = inp --> (cst <$> floatingpoint)
 
 (* let _ =
-  do_parse ~~parse_exp "1+2*3"
-  |> Option.get |> show_expr |> print_endline
+   do_parse ~~parse_exp "1+2*3"
+   |> Option.get |> show_expr |> print_endline
 
-let _ =
-  do_parse ~~parse_exp "(1+2)*3"
-  |> Option.get |> show_expr |> print_endline
+   let _ =
+   do_parse ~~parse_exp "(1+2)*3"
+   |> Option.get |> show_expr |> print_endline
 
-let _ =
-  do_parse ~~parse_exp "( 1 + 2 ) * ( 5 + 96) "
-  |> Option.get |> show_expr |> print_endline
+   let _ =
+   do_parse ~~parse_exp "( 1 + 2 ) * ( 5 + 96) "
+   |> Option.get |> show_expr |> print_endline
 
-let _ =
-  do_parse ~~parse_exp "(1+2)*(5+96)"
-  |> Option.get |> show_expr |> print_endline
+   let _ =
+   do_parse ~~parse_exp "(1+2)*(5+96)"
+   |> Option.get |> show_expr |> print_endline
 
-let _ =
-  do_parse ~~parse_exp "(1*2)+(5*96)"
-  |> Option.get |> show_expr |> print_endline
- *)
+   let _ =
+   do_parse ~~parse_exp "(1*2)+(5*96)"
+   |> Option.get |> show_expr |> print_endline
+*)
 
 let rec eval = function
   | Cst v -> v
@@ -57,13 +57,13 @@ let _ =
   while true do
     print_string "Calc # ";
     flush stdout;
-    let fst (a, _) = a in
     try
-      read_line () --> ~~parse_exp
-      |> Option.get |> fst |> eval |> string_of_float |> print_endline
+      match read_line() --> ~~parse_exp |> result_of_state with
+      | Ok v -> eval v |> string_of_float |> print_endline
+      | Error(o, _) -> print_endline ("Parse error at offset "^string_of_int o)
     with
     | Invalid_argument _ -> print_endline "Syntax error"
     | End_of_file ->
-        print_endline "Bye.";
-        exit 0
+      print_endline "Bye.";
+      exit 0
   done

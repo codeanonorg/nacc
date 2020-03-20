@@ -9,7 +9,19 @@
 (*                        Copyright (c) 2020 - CodeAnon                   *)
 (**************************************************************************)
 
+(** Type state *)
 type 'a state = ('a option * int * string)
+
+let state v o r = (v,o,r)
+
+let result_of_state =
+  function
+  | (Some v, _, _) -> Ok(v)
+  | (None, o, r) -> Error(o,r)
+
+let state_value = function (x, _, _) -> x
+let state_offset = function (_, o, _) -> o
+let state_rest = function (_, _, r) -> r
 
 (** Type parser *)
 type 'a parser = P of (string -> 'a state)

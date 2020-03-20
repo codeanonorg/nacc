@@ -40,14 +40,14 @@ let floatingpoint =
   let ( &> ) p1 p2 = concat <$> p1 <*> p2 in
   let maybe p inp =
     match inp --> p with
-    | Some (x, r) -> Some ([ x ], r)
-    | None -> Some ([], inp)
+    | (Some v, o, rest) -> (Some [v], o, rest)
+    | (None, o, rest) -> (Some [], o, rest)
   in
   convert
   <$> ( many (one_in "0123456789")
-      &> ~~(maybe (char '.'))
-      &> some (one_in "0123456789")
-      <|> many (one_in "0123456789") )
+        &> ~~(maybe (char '.'))
+        &> some (one_in "0123456789")
+        <|> many (one_in "0123456789") )
 
 (** Parser for binary operations patterns
     @param  cons    a 2-parameters constructor
