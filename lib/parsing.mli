@@ -9,6 +9,8 @@
 (*                        Copyright (c) 2020 - CodeAnon                   *)
 (**************************************************************************)
 
+type 'a state
+
 type 'a parser
 
 val pure : 'a -> 'a parser

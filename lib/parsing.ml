@@ -9,28 +9,28 @@
 (*                        Copyright (c) 2020 - CodeAnon                   *)
 (**************************************************************************)
 
+type 'a state = ('a option * int * string)
+
 (** Type parser *)
-type 'a parser = P of (string -> ('a * string) option)
+type 'a parser = P of (string -> 'a state)
 
 (** Pure parser (stop flux consumption, returns results) *)
-let pure x = P (fun input -> Some (x, input))
-
-(** Map *)
-let ( <$> ) f (P p) =
-  P
-    (fun input ->
-      match p input with None -> None | Some (x, next) -> Some (f x, next))
+let pure x = P (fun input -> (Some x, 0, input))
 
 (** Apply *)
 let ( <*> ) (P p1) (P p2) =
   P
     (fun input ->
-      match p1 input with
-      | None -> None
-      | Some (f, input') -> (
-          match p2 input' with
-          | Some (x, input'') -> Some (f x, input'')
-          | None -> None ))
+       match p1 input with
+       | (Some f, o', input') -> (
+           match p2 input' with
+           | (Some x, o'', input'') -> (Some (f x), o'+o'', input'')
+           | (None, o'', input'') -> (None, o'+o'', input''))
+       | (None, o', input') -> (None, o', input')
+    )
+
+(** Map *)
+let ( <$> ) f p = pure f <*> p
 
 (** Apply to the right *)
 let ( *> ) p1 p2 = (fun _ y -> y) <$> p1 <*> p2
@@ -40,11 +40,11 @@ let ( <* ) p1 p2 = (fun x _ -> x) <$> p1 <*> p2
 
 (** Alternative *)
 let ( <|> ) (P p1) (P p2) =
-  P (fun input -> match p1 input with None -> p2 input | x -> x)
+  P (fun input -> match p1 input with (None, _, _) -> p2 input | x -> x)
 
 (** Run a parser on a string *)
 let do_parse (P p) input =
-  match p input with Some (x, "") -> Some x | _ -> None
+  match p input with (Some x, _, _) -> Result.ok x | (None, o, inp) -> Result.error (o,inp)
 
 (** Feed a parser with a string (from left to right)
     This is verry different from [do_parse] ! No verifications are made on the
@@ -68,10 +68,10 @@ let some p = P (fun inp -> List.cons <$> p <*> many p <-- inp)
 let check pred =
   P
     (fun input ->
-      match input with
-      | s when s <> "" && pred s.[0] ->
-          Some (s.[0], String.(sub s 1 (length s - 1)))
-      | _ -> None)
+       match input with
+       | s when s <> "" && pred s.[0] ->
+         (Some s.[0], 1, String.(sub s 1 (length s - 1)))
+       | _ -> (None, 0, input))
 
 (** Alias for constructor [P] *)
 let ( ~~ ) f = P f
