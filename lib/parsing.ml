@@ -10,7 +10,6 @@
 (**************************************************************************)
 
 type 'a state = 'a option * int * int * string
-(** Type state *)
 
 let state v o l r = (v, o, l, r)
 
@@ -26,12 +25,18 @@ let state_rest (_, _, _, r) = r
 
 let state_line (_, _, l, _) = l
 
+let report e =
+  match e with
+  | Ok _ -> Printf.fprintf stdout "Nothing to declare\n"
+  | Error (o, l, _) ->
+    Printf.fprintf stdout "Parse error at line %d offset %d\n" o l
+
 type 'a parser = P of (string -> 'a state)
 
 let do_parse (P p) input =
   match p input with
-  | Some x, _, _, _ -> Result.ok x
-  | None, o, _, inp -> Result.error (o, inp)
+  | Some x, _, _, "" -> Result.ok x
+  | _, o, l, inp -> Result.error (o, l, inp)
 
 let ( --> ) inp (P p) = p inp
 
@@ -43,10 +48,10 @@ let ( <*> ) p1 p2 =
   P
     (fun input ->
        match p1 <-- input with
-       | Some f, o', _, input' -> (
+       | Some f, o', l', input' -> (
            match p2 <-- input' with
-           | Some x, o'', l, input'' -> (Some (f x), o' + o'', l, input'')
-           | None, o'', l, input'' -> (None, o' + o'', l, input'') )
+           | Some x, o'', l'', input'' -> (Some (f x), o' + o'', l'+l'', input'')
+           | None, o'', l'', input'' -> (None, o' + o'', l'+l'', input'') )
        | None, o', l, input' -> (None, o', l, input'))
 
 let ( <$> ) f p = pure f <*> p

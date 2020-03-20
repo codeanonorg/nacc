@@ -23,6 +23,8 @@ val state_line : 'a state -> int
 val state_rest : 'a state -> string
 (** Get the remaining characters of the string beeing parsed *)
 
+val report : ('a, int * int * string) result -> unit
+
 (** {1 Defining parsers} *)
 
 type 'a parser
@@ -65,7 +67,7 @@ val ( <|> ) : 'a parser -> 'a parser -> 'a parser
 
 (** {2 Utils} *)
 
-val do_parse : 'a parser -> string -> ('a, int * string) result
+val do_parse : 'a parser -> string -> ('a, int * int * string) result
 (** Run a parser on a string *)
 
 val ( --> ) : string -> 'a parser -> 'a state
