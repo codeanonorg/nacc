@@ -3,13 +3,13 @@ open Parsing
 module type INPUT_CONTRIB_TYPE = sig
   include INPUT_TYPE
 
-  val explode : outer -> inner list
+  val join : inner list -> outer
+
+  val concat : outer list -> outer
 end
 
-module ParserContrib (In : INPUT_CONTRIB_TYPE) = struct
+module Make (In : INPUT_CONTRIB_TYPE) = struct
   include Parser (In)
-
-
 
   let elem e = check (( = ) e)
 
@@ -46,33 +46,7 @@ module ParserContrib (In : INPUT_CONTRIB_TYPE) = struct
 end
 
 module StringParser = struct
-  module String = struct
-    include String
-
-    type inner = char
-
-    type outer = string
-
-    let rec explode = function
-      | "" -> []
-      | _ as s -> s.[0] :: explode (String.sub s 1 (String.length s - 1))
-
-    let extract n = function
-      | "" when n > 1 -> None
-      | "" -> Some ([], "")
-      | _ as s when n > String.length s -> None
-      | _ as s when n = String.length s -> Some (explode s, "")
-      | _ as s when n = 0 -> Some ([], s)
-      | _ as s ->
-        Some
-          (String.sub s 0 n |> explode, String.sub s n (String.length s - 1))
-
-    let rec join = function [] -> "" | c :: cs -> String.make 1 c ^ join cs
-
-    let concat = List.fold_left ( ^ ) ""
-  end
-
-  include ParserContrib (String)
+  include Make (Libnacc.String)
 
   let integer =
     let convert l = String.join l |> int_of_string in

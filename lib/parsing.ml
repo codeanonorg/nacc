@@ -1,35 +1,30 @@
-module type INPUT_TYPE = sig
-  type outer
+module type STREAM = sig
+  type 'a t
 
-  type inner
+  val peek : 'a t -> ('a * 'a t) option
 
-  val extract : int -> outer -> (inner list * outer) option
+  val npeek: int -> 'a t -> ('a list * 'a t) option
 
-  val join : inner list -> outer
-
-  val concat : outer list -> outer
+  val empty: 'a t
 end
 
-module Parser (In : INPUT_TYPE) = struct
-  type 'a state = 'a option * int * In.outer
+module Parser (In : STREAM) = struct
+  type ('a, 'r) state = 'r option * int * 'a In.t
 
-  type input = In.outer
+  type ('a, 'r) parsefun = 'a In.t -> ('a, 'r) state
 
-  type 'a parsefun = input -> 'a state
+  type ('a, 'r) t = P of ('a, 'r) parsefun
 
-  type 'a parser = P of 'a parsefun
-
-  type 'a t = 'a parser
-
-  exception ParseException of int * In.outer
+  type ('a, 'r) parser = ('a, 'r) t
 
   let parse (P p) inp = p inp
 
+  (* TODO: Error handling module *)
   let do_parse (P p) inp =
     match p inp with
-    | Some x, _, r when r = In.join [] -> x
-    | Some _, o, r -> raise (ParseException (o, r))
-    | None, o, r -> raise (ParseException (o, r))
+    | Some x, _, r when r = In.empty -> Result.ok x
+    | Some _, o, r -> Result.error (o, r)
+    | None, o, r -> Result.error (o, r)
 
   let pure v = P (fun inp -> (Some v, 0, inp))
   let nothing = P(fun inp -> (None, 0, inp))
@@ -37,15 +32,15 @@ module Parser (In : INPUT_TYPE) = struct
   let eat =
     P
       (fun inp ->
-         match In.extract 1 inp with
-         | Some (c :: _, rest) -> (Some c, 1, rest)
+         match In.peek inp with
+         | Some (c, rest) -> (Some c, 1, rest)
          | _ -> (None, 0, inp))
 
   let check f =
     P
       (fun inp ->
-         match In.extract 1 inp with
-         | Some (c :: _, rest) when f c -> (Some c, 1, rest)
+         match In.peek inp with
+         | Some (c, rest) when f c -> (Some c, 1, rest)
          | _ -> (None, 0, inp))
 
   let ( <*> ) (P p1) (P p2) =
