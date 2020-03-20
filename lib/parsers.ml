@@ -1,74 +1,63 @@
-(**************************************************************************)
-(*                           _   _    _    ____ ____                      *)
-(*                          | \ | |  / \  / ___/ ___|                     *)
-(*                          |  \| | / _ \| |  | |                         *)
-(*                          | |\  |/ ___ \ |__| |___                      *)
-(*                          |_| \_/_/   \_\____\____|                     *)
-(*                                                                        *)
-(*                                                                        *)
-(*                        Copyright (c) 2020 - CodeAnon                   *)
-(**************************************************************************)
-
 open Parsing
 
-(** Parse a single char *)
-let char c = check (( == ) c)
+module type INPUT_CONTRIB_TYPE = sig
+  include INPUT_TYPE
 
-(** Parser for any char of a given list *)
-let one_of cl = check (fun c -> List.mem c cl)
+  val join : inner list -> outer
 
-(** Parse one any char of a given string *)
-let one_in s = check (String.contains s)
+  val concat : outer list -> outer
+end
 
-(** Parse on of the char of a given list *)
-let spaced p =
-  let spaces = many (check (( == ) ' ')) in
-  spaces *> p <* spaces
+module Make (In : INPUT_CONTRIB_TYPE) = struct
+  include Parser (In)
 
-(** Parser for integer litterals *)
-let integer =
-  let convert l =
-    List.(fold_left ( ^ ) "" (map (String.make 1) l)) |> int_of_string
-  in
-  convert <$> some (one_in "0123456789")
+  let elem e = check (( = ) e)
 
-let floatingpoint =
-  let convert l =
-    List.(fold_left ( ^ ) "" (map (String.make 1) l)) |> float_of_string
-  in
-  let concat a b = List.concat [ a; b ] in
-  let ( &> ) p1 p2 = concat <$> p1 <*> p2 in
-  let maybe p inp =
-    match inp --> p with
-    | Some (x, r) -> Some ([ x ], r)
-    | None -> Some ([], inp)
-  in
-  convert
-  <$> ( many (one_in "0123456789")
-      &> ~~(maybe (char '.'))
-      &> some (one_in "0123456789")
-      <|> many (one_in "0123456789") )
+  let one_of el = check (fun e -> List.mem e el)
 
-(** Parser for binary operations patterns
-    @param  cons    a 2-parameters constructor
-    @param  c       an operator character
-    @param  v       any parser *)
-let binop cons c v = cons <$> v <*> spaced (char c) *> v
+  let one_in s = one_of (In.explode s)
 
-(** Parser for binary operations patterns
-    @param  cons    a 2-parameters constructor
-    @param  cc      a parser (for the binary operator)
-    @param  v       any parser *)
-let cbinop cons cc v = cons <$> v <*> spaced cc *> v
+  let rec seq =
+    function
+    | [] -> pure []
+    | p::pl -> List.cons <$> p <*> seq pl
 
-(** Parser for optionnal white spaces *)
-let blanks = many (char ' ' <|> char '\t' <|> char '\n')
+  let literal s = In.join <$> (In.explode s |> List.map elem |> seq)
 
-(** Parser for at least one white space *)
-let force_blanks = some (char ' ' <|> char '\t' <|> char '\n')
+  let binop2 cons c vl vr = cons <$> vl <*> c *> vr
 
-(** Parser parenthesized data *)
-let parenthesized opar v cpar = spaced (char opar) *> v <* spaced (char cpar)
+  let binop cons c v = binop2 cons c v v
 
-(** Custom parenthesized data *)
-let cparenthesized copar v ccpar = spaced copar *> v <* spaced ccpar
+  let ebinop2 cons c vl vr = binop2 cons (elem c) vl vr
+
+  let ebinop cons c v = ebinop2 cons c v v
+
+  let parenthesized opar v cpar = opar *> v <* cpar
+
+  let eparenthesized eopar v ecpar = parenthesized (elem eopar) v (elem ecpar)
+
+  let trim el p = let inner = List.fold_right (fun x acc -> acc <|> (elem x)) el nothing in
+    many inner *> p
+
+  let optional (P p) = P(fun inp ->
+      match p inp with
+      | (None, o, r) -> (Some [], o, r)
+      | (Some x, o, r) -> (Some [x], o, r))
+end
+
+module StringParser = struct
+  include Make (Libnacc.String)
+
+  let integer =
+    let convert l = String.join l |> int_of_string in
+    convert <$> some (one_in "0123456789")
+
+  let floatingpoint =
+    let convert l = String.join l |> float_of_string in
+    let plist = one_in "0123456789" in
+    let concat a b = List.concat [ a; b ] in
+    let ( &> ) p1 p2 = concat <$> p1 <*> p2 in
+    convert
+    <$> (many plist &> (optional (elem '.')) &> some plist)
+    <|> (float_of_int <$> integer)
+end

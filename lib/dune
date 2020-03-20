@@ -2,5 +2,4 @@
  (name "libnacc")
  (public_name "nacc")
  (preprocess
-  (pps ppx_variants_conv))
- (modules parsing parsers))
+  (pps ppx_variants_conv)))
