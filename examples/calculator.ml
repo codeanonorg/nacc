@@ -14,9 +14,11 @@ let rec parse_exp inp =
   inp
   --> (binop add '+' ~~parse_mul <|> binop sub '-' ~~parse_mul <|> ~~parse_mul)
 
+
 and parse_mul inp =
   inp
   --> (binop mul '*' ~~parse_pow <|> binop div '/' ~~parse_pow <|> ~~parse_pow)
+
 
 and parse_pow inp = inp --> (binop pow '^' ~~parse_fac <|> ~~parse_fac)
 
@@ -53,18 +55,17 @@ let rec eval = function
   | Div (l, r) -> eval l /. eval r
   | Pow (l, r) -> Float.pow (eval l) (eval r)
 
+
 let _ =
   while true do
-    print_string "Calc # ";
-    flush stdout;
-    try
-      (* match read_line () --> ~~parse_exp |> result_of_state with
-         | Ok v -> eval v |> string_of_float |> print_endline
-         | e -> report e *)
-      do_parse ~~parse_exp (read_line()) |> report
-    with
+    print_string "Calc # " ;
+    flush stdout ;
+    (* match read_line () --> ~~parse_exp |> result_of_state with
+       | Ok v -> eval v |> string_of_float |> print_endline
+       | e -> report e *)
+    try do_parse ~~parse_exp (read_line ()) |> report with
     | Invalid_argument _ -> print_endline "Syntax error"
     | End_of_file ->
-      print_endline "Bye.";
+      print_endline "Bye." ;
       exit 0
   done

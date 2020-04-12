@@ -25,6 +25,7 @@ let spaced p =
   let spaces = many (check (( == ) ' ')) in
   spaces *> p <* spaces
 
+
 (** Parser for integer litterals *)
 let integer =
   let convert l =
@@ -41,16 +42,19 @@ let floatingpoint =
   <|> (convert <$> integer <*> char '.' *> (join <$> some (one_in "0123456789")))
   <|> (float_of_int <$> integer)
 
+
 (** Parser for binary operations patterns
-    @param  cons    a 2-parameters constructor
-    @param  c       an operator character
-    @param  v       any parser *)
+
+    @param cons a 2-parameters constructor
+    @param c an operator character
+    @param v any parser *)
 let binop cons c v = cons <$> v <*> spaced (char c) *> v
 
 (** Parser for binary operations patterns
-    @param  cons    a 2-parameters constructor
-    @param  cc      a parser (for the binary operator)
-    @param  v       any parser *)
+
+    @param cons a 2-parameters constructor
+    @param cc a parser (for the binary operator)
+    @param v any parser *)
 let cbinop cons cc v = cons <$> v <*> spaced cc *> v
 
 (** Parser for optionnal white spaces *)
