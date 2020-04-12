@@ -65,6 +65,19 @@ val ( <* ) : 'a parser -> 'b parser -> 'a parser
 val ( <|> ) : 'a parser -> 'a parser -> 'a parser
 (** Alternative *)
 
+(** {2 Let notation} *)
+
+val (let*) : 'a parser -> ('a -> 'b parser) -> 'b parser
+
+(** {2 Powerfull Combinators} *)
+
+val chainl : ('a -> 'a -> 'a) parser -> 'a parser -> 'a parser
+(** Eliminate left recursion "left associative" chains *)
+
+val chainr : 'a parser -> ('a -> 'a -> 'a) parser -> 'a parser
+(** Eliminate left recursion "right associative" chains *)
+
+
 (** {2 Utils} *)
 
 val do_parse : 'a parser -> string -> ('a, int * int * string) result

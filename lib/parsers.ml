@@ -32,22 +32,6 @@ let integer =
   in
   convert <$> some (one_in "0123456789")
 
-(* let floatingpoint =
-   let convert l =
-    List.(fold_left ( ^ ) "" (map (String.make 1) l)) |> float_of_string
-   in
-   let concat a b = List.concat [ a; b ] in
-   let ( &> ) p1 p2 = concat <$> p1 <*> p2 in
-   let maybe p inp =
-    match inp --> p with
-    | (Some v, o, rest) -> (Some [v], o, rest)
-    | (None, o, rest) -> (Some [], o, rest)
-   in
-   convert
-   <$> ( many (one_in "0123456789")
-        &> ~~(maybe (char '.'))
-        &> some (one_in "0123456789")
-        <|> many (one_in "0123456789") ) *)
 
 let floatingpoint =
   let join l = List.(fold_left ( ^ ) "" (map (String.make 1) l)) in

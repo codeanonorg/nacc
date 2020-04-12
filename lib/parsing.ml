@@ -25,6 +25,8 @@ let state_rest (_, _, _, r) = r
 
 let state_line (_, _, l, _) = l
 
+let update_stats (o1, l1) (v, o, l, r) = (v, o + o1, l + l1, r)
+
 let report e =
   match e with
   | Ok _ -> Printf.fprintf stdout "Nothing to declare\n"
@@ -48,11 +50,11 @@ let ( <*> ) p1 p2 =
   P
     (fun input ->
        match p1 <-- input with
-       | Some f, o', l', input' -> (
-           match p2 <-- input' with
-           | Some x, o'', l'', input'' -> (Some (f x), o' + o'', l'+l'', input'')
-           | None, o'', l'', input'' -> (None, o' + o'', l'+l'', input'') )
-       | None, o', l, input' -> (None, o', l, input'))
+       | Some f, o, l, input -> (
+           match p2 <-- input with
+           | Some x, o', l', rest -> update_stats (o, l) (Some (f x), o', l', rest)
+           | None, o', l', rest -> update_stats (o, l) (None, o', l', rest))
+       | None, o, l, input -> (None, o, l, input))
 
 let ( <$> ) f p = pure f <*> p
 
@@ -80,3 +82,29 @@ let check pred =
        | _ -> (None, 0, 0, input))
 
 let ( ~~ ) f = P f
+
+let (let*) p f = P (fun input ->
+    match input --> p with
+    | None, o, l, r -> None, o, l, r
+    | Some v, o, l, r -> update_stats (o, l) (r --> (f v))
+  )
+
+let chainl op term =
+  let rec loop v = (
+    let* f = op in
+    let* y = term in
+    loop (f v y)) <|> (pure v)
+  in
+  let* x = term in loop x
+
+let chainr term op =
+  let rec loop inp =
+    let inner = (
+      let* v = term in
+      let* f = op in
+      let* n = P(fun inp -> loop inp) in
+      pure (f v n)) <|> term
+    in
+    inp --> inner
+  in
+  P (fun inp -> loop inp)
