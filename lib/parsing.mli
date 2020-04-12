@@ -3,10 +3,13 @@
 type 'a state
 (** Type state *)
 
+type error
+(** Type error *)
+
 val state : 'a option -> int -> int -> string -> 'a state
 (** Create a new parser state *)
 
-val result_of_state : 'a state -> ('a, int * int * string) result
+val result_of_state : 'a state -> ('a, error) result
 (** Get the result *)
 
 val state_value : 'a state -> 'a option
@@ -21,8 +24,8 @@ val state_line : 'a state -> int
 val state_rest : 'a state -> string
 (** Get the remaining characters of the string beeing parsed *)
 
-val report : ('a, int * int * string) result -> unit
-(** Report the state *)
+val report : error -> unit
+(** Report an error *)
 
 (** {1 Defining parsers} *)
 
@@ -33,17 +36,13 @@ val ( ~~ ) : (string -> 'a state) -> 'a parser
 (** Parser constructor *)
 
 val pure : 'a -> 'a parser
-(** Pure parser (stop flux consumption, returns results) *)
+(** Pure parser consuming no character and returning a value of type ['a]. *)
 
 val many : 'a parser -> 'a list parser
-(** Parse zero or more times a given pattern
-
-    @param p a parser *)
+(** Parse zero or more times a given pattern *)
 
 val some : 'a parser -> 'a list parser
-(** Parse one or more times a given pattern
-
-    @param p a parser *)
+(** Parse one or more times a given pattern *)
 
 val check : (char -> bool) -> char parser
 (** Test a predicate on the first character of the input. Resolve to this
@@ -105,7 +104,7 @@ val chainr : 'a parser -> ('a -> 'a -> 'a) parser -> 'a parser
 
 (** {2 Utils} *)
 
-val do_parse : 'a parser -> string -> ('a, int * int * string) result
+val do_parse : 'a parser -> string -> ('a, error) result
 (** Run a parser against a string *)
 
 val ( --> ) : string -> 'a parser -> 'a state

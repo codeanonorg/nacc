@@ -11,11 +11,14 @@
 
 type 'a state = 'a option * int * int * string
 
+type error = int * int * string
+
 let state v o l r = (v, o, l, r)
 
 let result_of_state = function
   | Some v, _, _, _ -> Ok v
   | None, o, l, r -> Error (o, l, r)
+
 
 let state_value (x, _, _, _) = x
 
@@ -27,11 +30,9 @@ let state_line (_, _, l, _) = l
 
 let update_stats (o1, l1) (v, o, l, r) = (v, o + o1, l + l1, r)
 
-let report e =
-  match e with
-  | Ok _ -> Printf.fprintf stdout "Nothing to declare\n"
-  | Error (o, l, _) ->
-    Printf.fprintf stdout "Parse error at line %d offset %d\n" o l
+let report (o, l, _) =
+  Printf.fprintf stdout "Parse error at line %d offset %d\n" o l
+
 
 type 'a parser = P of (string -> 'a state)
 
@@ -53,8 +54,8 @@ let ( <*> ) p1 p2 =
     | None, o, l, input -> (None, o, l, input)
     | Some f, o, l, input ->
       ( match p2 <-- input with
-        | Some x, o', l', rest -> update_stats (o, l) (Some (f x), o', l', rest)
-        | None, o', l', rest -> update_stats (o, l) (None, o', l', rest) )
+      | Some x, o', l', rest -> update_stats (o, l) (Some (f x), o', l', rest)
+      | None, o', l', rest -> update_stats (o, l) (None, o', l', rest) )
   in
   P inner
 
@@ -73,6 +74,7 @@ let ( <|> ) p1 p2 =
   in
   P inner
 
+
 let rec many p = P (fun inp -> List.cons <$> p <*> many p <|> pure [] <-- inp)
 
 let some p = P (fun inp -> List.cons <$> p <*> many p <-- inp)
@@ -89,6 +91,7 @@ let check pred =
   in
   P inner
 
+
 let ( ~~ ) f = P f
 
 let ( let* ) p f =
@@ -99,6 +102,7 @@ let ( let* ) p f =
   in
   P inner
 
+
 let chainl op term =
   let rec loop v =
     (let* f = op in
@@ -108,6 +112,7 @@ let chainl op term =
   in
   let* x = term in
   loop x
+
 
 let chainr term op =
   let rec loop inp =

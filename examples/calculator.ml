@@ -10,42 +10,21 @@ type expr =
   | Pow of expr * expr
 [@@deriving variants, show]
 
-let rec parse_exp inp =
-  inp
-  --> (binop add '+' ~~parse_mul <|> binop sub '-' ~~parse_mul <|> ~~parse_mul)
+let parse_mul = spaced (char '*') *> pure mul
+let parse_add = spaced (char '+') *> pure add
+let parse_sub = spaced (char '-') *> pure sub
+let parse_div = spaced (char '/') *> pure div
+let parse_pow = spaced (char '^') *> pure pow
+let parse_cst = cst <$> floatingpoint
+let parens p = parenthesized '(' p ')'
 
-
-and parse_mul inp =
-  inp
-  --> (binop mul '*' ~~parse_pow <|> binop div '/' ~~parse_pow <|> ~~parse_pow)
-
-
-and parse_pow inp = inp --> (binop pow '^' ~~parse_fac <|> ~~parse_fac)
-
-and parse_fac inp = inp --> (parenthesized '(' ~~parse_exp ')' <|> ~~parse_cst)
-
-and parse_cst inp = inp --> (cst <$> floatingpoint)
-
-(* let _ =
-   do_parse ~~parse_exp "1+2*3"
-   |> Option.get |> show_expr |> print_endline
-
-   let _ =
-   do_parse ~~parse_exp "(1+2)*3"
-   |> Option.get |> show_expr |> print_endline
-
-   let _ =
-   do_parse ~~parse_exp "( 1 + 2 ) * ( 5 + 96) "
-   |> Option.get |> show_expr |> print_endline
-
-   let _ =
-   do_parse ~~parse_exp "(1+2)*(5+96)"
-   |> Option.get |> show_expr |> print_endline
-
-   let _ =
-   do_parse ~~parse_exp "(1*2)+(5*96)"
-   |> Option.get |> show_expr |> print_endline
-*)
+let expr =
+  let rec parse_expr inp = inp --> chainl (parse_add <|> parse_sub) ~~parse_term 
+  and parse_term inp = inp --> chainl (parse_mul <|> parse_div) ~~parse_fact
+  and parse_fact inp = inp --> chainr ~~parse_atom parse_pow 
+  and parse_atom inp = inp --> (parens ~~parse_expr <|> parse_cst)
+  in
+  ~~parse_expr
 
 let rec eval = function
   | Cst v -> v
@@ -55,15 +34,16 @@ let rec eval = function
   | Div (l, r) -> eval l /. eval r
   | Pow (l, r) -> Float.pow (eval l) (eval r)
 
+let process out =
+  match out with
+  | Ok expr -> print_float (eval expr) |> print_newline
+  | Error e -> report e
 
 let _ =
   while true do
     print_string "Calc # " ;
-    flush stdout ;
-    (* match read_line () --> ~~parse_exp |> result_of_state with
-       | Ok v -> eval v |> string_of_float |> print_endline
-       | e -> report e *)
-    try do_parse ~~parse_exp (read_line ()) |> report with
+    flush stdout;
+    try do_parse expr (read_line ()) |> process with
     | Invalid_argument _ -> print_endline "Syntax error"
     | End_of_file ->
       print_endline "Bye." ;
