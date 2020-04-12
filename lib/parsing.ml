@@ -126,3 +126,14 @@ let chainr term op =
     inp --> inner
   in
   P (fun inp -> loop inp)
+
+
+let do_parse_from_file p f =
+  let ic = open_in f in
+  let s = ref "" in
+  let ok = ref false in
+  while not !ok do
+    try s := !s ^ input_line ic ^ "\n" with
+    | End_of_file -> ok := true
+  done ;
+  do_parse p !s

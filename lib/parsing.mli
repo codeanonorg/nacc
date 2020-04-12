@@ -114,3 +114,6 @@ val ( --> ) : string -> 'a parser -> 'a state
 val ( <-- ) : 'a parser -> string -> 'a state
 (** Feed a parser with a string (from right to left) [p <-- input] is
     [input --> p]. This function is just for convenience. *)
+
+val do_parse_from_file : 'a parser -> string -> ('a, error) result
+(** Run a parser against a file *)
