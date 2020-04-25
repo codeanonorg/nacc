@@ -1,5 +1,5 @@
 version=0.13.0
-profile = default
+profile = sparse
 if-then-else = fit-or-vertical
 break-infix = fit-or-vertical
 break-infix-before-func = true
@@ -7,3 +7,5 @@ type-decl = sparse
 break-cases = all
 ocp-indent-compat = true
 cases-exp-indent = 2
+parens-ite = true
+parse-docstrings
