@@ -55,3 +55,7 @@ let _ =
     with End_of_file -> print_endline "Bye."; exit 0
   done
 ```
+
+## Comparison with Opal
+
+[Opal](https://github.com/pyrocat101/opal) is another great module to write simple parsers. However Opal focuses on a *monadic* api while Nacc also takes inspiration from *arrow style parsers* as described in [this document](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/parsec-paper-letter.pdf).
